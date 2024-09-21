@@ -7,7 +7,7 @@ import os
 def download_video(video_url, filename):
     response = requests.get(video_url, stream=True)
     if response.status_code == 200:
-        with open(filename,'downloaded_file.bin') as f:
+        with open(filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         return filename
