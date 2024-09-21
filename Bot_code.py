@@ -82,7 +82,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("No valid link found.")
 
 def main():
-    app = ApplicationBuilder().token("8128737803:AAG4mXx7mvdvZXESouv8DtIrQYmxZTpHIto).build()
+    app = ApplicationBuilder().token("8128737803:AAG4mXx7mvdvZXESouv8DtIrQYmxZTpHIto").build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
