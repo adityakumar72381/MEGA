@@ -102,7 +102,8 @@ async def start_broadcast(update: Update, context) -> int:
 # Function to handle PIN input
 async def check_pin(update: Update, context) -> int:
     pin = update.message.text
-    if pin == "/admin04":
+    if entered_pin.strip() == "5888":
+        
         await update.message.reply_text("PIN correct! Now send the broadcast message:")
         return BROADCAST
     else:
