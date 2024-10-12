@@ -81,12 +81,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True))
-    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8")).build()
+    application = ApplicationBuilder().token(os.getenv("8128737803:AAEFMV57HxE5AKiW_Clu5j_VQ0omFS3a1m0")).build()
     application.process_update(update)
     return '', 200
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8")).build()
+    application = ApplicationBuilder().token(os.getenv("8128737803:AAEFMV57HxE5AKiW_Clu5j_VQ0omFS3a1m0")).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))  # Listen on the specified port
