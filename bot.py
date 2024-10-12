@@ -37,9 +37,8 @@ def download_video(m3u8_url: str, file_path: str) -> bool:
         print(f"Error downloading video: {e}")
         return False
 
-# Function to download a fixed thumbnail image
-def download_thumbnail() -> str:
-    thumbnail_url = "https://envs.sh/nkz.jpg"
+# Function to download a thumbnail from a specified URL
+def download_thumbnail(thumbnail_url: str) -> str:
     thumbnail_path = os.path.join(os.getcwd(), 'thumbnail.jpg')
     response = requests.get(thumbnail_url)
     if response.status_code == 200:
@@ -62,9 +61,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Download the video from the .m3u8 link
         if download_video(downloadable_link, temp_file_path):
-            # Download the fixed thumbnail
-            thumbnail_path = download_thumbnail()
-            
+            # Download the thumbnail from the specified URL
+            thumbnail_url = "https://envs.sh/nkz.jpg"
+            thumbnail_path = download_thumbnail(thumbnail_url)
+
             # Send the video with the thumbnail
             with open(temp_file_path, 'rb') as video_file:
                 await update.message.reply_video(video_file, thumb=open(thumbnail_path, 'rb'), caption="Here’s your video!")
@@ -86,7 +86,7 @@ def webhook():
     return '', 200
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
+    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8)).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))  # Listen on the specified port
