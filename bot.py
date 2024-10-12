@@ -81,7 +81,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True))
-    application = ApplicationBuilder().token(os.getenv("8128737803:AAGa3Dat8M5irxGzA7is0gs_Rf0wbS6p9V0").build()
+    application = ApplicationBuilder().token(os.getenv("8128737803:AAGa3Dat8M5irxGzA7is0gs_Rf0wbS6p9V0")).build()
     application.process_update(update)
     return '', 200
 
