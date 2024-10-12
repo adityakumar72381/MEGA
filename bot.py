@@ -1,7 +1,7 @@
 import os
 import requests
 import m3u8
-from telegram import Update
+from telegram import Update, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import re
 
@@ -37,7 +37,10 @@ def download_video(m3u8_url: str, file_path: str) -> bool:
 
 # Define a command handler for the /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a TeraBox link and I'll download the video for you.")
+    await update.message.reply_text(
+        "👋 Welcome to the TeraBox Video Downloader Bot!\n"
+        "🔗 Send me a TeraBox link, and I'll download the video for you! 🎥"
+    )
 
 # Define a message handler for text messages
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,15 +50,34 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if downloadable_link:
         temp_file_path = os.path.join(os.getcwd(), 'downloaded_video.mp4')
         
+        await update.message.reply_text("🚀 Downloading your video, please wait... ⏳")
+        
         # Download the video from the .m3u8 link
         if download_video(downloadable_link, temp_file_path):
             with open(temp_file_path, 'rb') as file:
-                await update.message.reply_video(file)
-            os.remove(temp_file_path)
+                # Use the thumbnail image
+                thumbnail_url = "https://envs.sh/nkz.jpg"
+                thumbnail_path = os.path.join(os.getcwd(), 'thumbnail.jpg')
+                
+                # Download the thumbnail image
+                response = requests.get(thumbnail_url)
+                with open(thumbnail_path, 'wb') as thumb_file:
+                    thumb_file.write(response.content)
+
+                await update.message.reply_video(
+                    video=file,
+                    thumb=InputFile(thumbnail_path)  # Add the thumbnail
+                )
+                
+                # Clean up the temporary files
+                os.remove(temp_file_path)
+                os.remove(thumbnail_path)
+                
+                await update.message.reply_text("✅ Your video has been downloaded and sent! Enjoy! 🎉")
         else:
-            await update.message.reply_text("Failed to download the video.")
+            await update.message.reply_text("❌ Failed to download the video. Please try again.")
     else:
-        await update.message.reply_text("Invalid TeraBox link format.")
+        await update.message.reply_text("⚠️ Invalid TeraBox link format. Please send a valid link.")
 
 def main():
     # Directly use the token here
