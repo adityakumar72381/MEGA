@@ -86,7 +86,7 @@ def webhook():
     return '', 200
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8)).build()
+    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8")).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))  # Listen on the specified port
