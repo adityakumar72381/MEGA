@@ -6,3 +6,4 @@ gunicorn==20.1.0
 aiohttp==3.7.4
 m3u8==0.7.0
 Werkzeug==2.2.3  # Specify a compatible version
+aiofiles
