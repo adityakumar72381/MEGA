@@ -103,7 +103,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Invalid TeraBox link format. Please send a valid link.")
 
 def main():
-    bot_token = os.getenv("8128737803:AAHzwLZjprBz-iMYHgNuLJm-t_Q0YA_L4qs")  # Store the token as an environment variable
+    bot_token = os.getenv("8128737803:AAGTqn4OGufZYhByWTVGmFgITL-v0cy3D1g")  # Store the token as an environment variable
     application = ApplicationBuilder().token(bot_token).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
