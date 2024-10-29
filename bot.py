@@ -1,92 +1,298 @@
 import os
-import requests
-import m3u8
-from flask import Flask, request
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-import re
+import json
+import asyncio
+import random
+from datetime import datetime
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
-app = Flask(__name__)
+BASIC_VIDEO_DIR = 'basic_video_dir'
+PREMIUM_VIDEO_DIR = 'premium_video_dir'
+LIMIT_FILE = 'limits.json'
+UNLIMITED_USERS_FILE = 'unlimited_users.json'
+BROADCAST_USERS_FILE = 'user_id_forbroadcast.json'
+ADMIN_ID = 6128121762  # Admin's ID
+ADMIN_CONTACT_BOT = "https://t.me/Ddose_membership_contactbot"
 
-# Function to convert TeraBox link to downloadable .m3u8 link
-def convert_link(link: str) -> str:
-    match = re.search(r's/([\w-]+)', link)
-    if match:
-        video_id = match.group(1)
-        return f"https://apis.forn.fun/tera/m3u8.php?id={video_id}"
-    return None
+def create_directories_and_files():
+    if not os.path.exists(BASIC_VIDEO_DIR):
+        os.makedirs(BASIC_VIDEO_DIR)
+    if not os.path.exists(PREMIUM_VIDEO_DIR):
+        os.makedirs(PREMIUM_VIDEO_DIR)
+    if not os.path.exists(LIMIT_FILE):
+        with open(LIMIT_FILE, 'w') as f:
+            json.dump({}, f)
+    if not os.path.exists(UNLIMITED_USERS_FILE):
+        with open(UNLIMITED_USERS_FILE, 'w') as f:
+            json.dump([], f)
+    if not os.path.exists(BROADCAST_USERS_FILE):
+        with open(BROADCAST_USERS_FILE, 'w') as f:
+            json.dump([], f)
 
-# Function to download video segments and merge them into a single file
-def download_video(m3u8_url: str, file_path: str) -> bool:
-    try:
-        m3u8_obj = m3u8.load(m3u8_url)
-        segment_urls = [seg.absolute_uri for seg in m3u8_obj.segments]
+create_directories_and_files()
 
-        # Open the target file for writing in binary mode
-        with open(file_path, 'wb') as video_file:
-            for segment_url in segment_urls:
-                response = requests.get(segment_url, stream=True)
-                if response.status_code == 200:
-                    video_file.write(response.content)
-                else:
-                    print(f"Failed to download segment: {segment_url}")
-                    return False
+def create_video_keyboard():
+    keyboard = [
+        [KeyboardButton("Basic Videos"), KeyboardButton("Premium Videos")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
-        return True
-    except Exception as e:
-        print(f"Error downloading video: {e}")
-        return False
+def create_save_video_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("Save in Basic Videos", callback_data='save_basic')],
+        [InlineKeyboardButton("Save in Premium Videos", callback_data='save_premium')]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
-# Function to download a fixed thumbnail image
-def download_thumbnail() -> str:
-    thumbnail_url = "https://envs.sh/nkz.jpg"
-    thumbnail_path = os.path.join(os.getcwd(), 'thumbnail.jpg')
-    response = requests.get(thumbnail_url)
-    if response.status_code == 200:
-        with open(thumbnail_path, 'wb') as thumbnail_file:
-            thumbnail_file.write(response.content)
-        return thumbnail_path
-    return None
 
-# Define a command handler for the /start command
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a TeraBox link and I'll download the video for you.")
 
-# Define a message handler for text messages
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
-    downloadable_link = convert_link(user_message)
+STICKER_ID = "CAACAgUAAxkBAAKFZGcbti0amQABJBstAAHv6t5QtIL-gd0AAgQAA8EkMTGJ5R1uC7PIEDYE"
 
-    if downloadable_link:
-        temp_file_path = os.path.join(os.getcwd(), 'downloaded_video.mp4')
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.message.chat.id
+    add_user_for_broadcast(user_id)
 
-        # Download the video from the .m3u8 link
-        if download_video(downloadable_link, temp_file_path):
-            # Download the fixed thumbnail
-            thumbnail_path = download_thumbnail()
-            
-            # Send the video with the thumbnail
-            with open(temp_file_path, 'rb') as video_file:
-                await update.message.reply_video(video_file, thumb=open(thumbnail_path, 'rb'), caption="Here’s your video!")
-            
-            # Clean up
-            os.remove(temp_file_path)
-            if thumbnail_path:
-                os.remove(thumbnail_path)
-        else:
-            await update.message.reply_text("Failed to download the video.")
+    # Send the sticker and store the message object to get the message_id
+    sticker_message = await context.bot.send_sticker(chat_id=user_id, sticker=STICKER_ID)
+
+    # Wait for 1 second
+    await asyncio.sleep(1)
+
+    # Delete the sticker message
+    await context.bot.delete_message(chat_id=user_id, message_id=sticker_message.message_id)
+    # Send the first message with the join link
+    await update.message.reply_text(
+        "Must Joinâ¬‡ï¸\nhttps://t.me/+adhSk-n9lXY5NzM1\n\nThis bot was made using @LivegramBot"
+    )
+
+    # Wait for 5 seconds
+    await asyncio.sleep(5)
+
+    # Send the final message asking for video type selection
+    await update.message.reply_text(
+        "Please choose which type of video you want:",
+        reply_markup=create_video_keyboard()
+    )
+def add_user_for_broadcast(user_id):
+    with open(BROADCAST_USERS_FILE, 'r') as f:
+        broadcast_users = json.load(f)
+
+    if user_id not in broadcast_users:
+        broadcast_users.append(user_id)
+        with open(BROADCAST_USERS_FILE, 'w') as f:
+            json.dump(broadcast_users, f)
+
+def has_unlimited_access(user_id):
+    with open(UNLIMITED_USERS_FILE, 'r') as f:
+        unlimited_users = json.load(f)
+    return user_id in unlimited_users
+
+async def handle_video_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.message.chat.id
+    video_type = update.message.text.strip()
+
+    with open(LIMIT_FILE, 'r') as f:
+        limits = json.load(f)
+
+    current_date = datetime.now().date().isoformat()
+    user_limits = limits.get(str(user_id), {"date": current_date, "basic": 0, "premium": 0, "sent_videos": []})
+
+    if user_limits["date"] != current_date:
+        user_limits = {"date": current_date, "basic": 0, "premium": 0, "sent_videos": []}
+
+    unlimited_access = has_unlimited_access(user_id)
+
+    if video_type.lower() == 'basic videos':
+        if not unlimited_access and user_limits['basic'] >= 10:
+            await update.message.reply_text(
+                "Your daily limit for basic videos has been exceeded. Please contact [Admin](https://t.me/Ddose_membership_contactbot) or try again tomorrow.",
+                parse_mode='Markdown'
+            )
+            return
+        directory = BASIC_VIDEO_DIR
+    elif video_type.lower() == 'premium videos':
+        if not unlimited_access and user_limits['premium'] >= 1:
+            await update.message.reply_text(
+                "Your daily limit for premium videos has been exceeded. Please contact [Admin](https://t.me/Ddose_membership_contactbot) or try again tomorrow.",
+                parse_mode='Markdown'
+            )
+            return
+        directory = PREMIUM_VIDEO_DIR
     else:
-        await update.message.reply_text("Invalid TeraBox link format.")
+        await update.message.reply_text("Invalid selection. Please select 'Basic Videos' or 'Premium Videos'.", reply_markup=create_video_keyboard())
+        return
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True))
-    application = ApplicationBuilder().token(os.getenv("8128737803:AAFoS0loRxFx7uZwWIoBSp_HP2z_yqA_el8")).build()
-    application.process_update(update)
-    return '', 200
+    video_files = os.listdir(directory)
 
-if __name__ == "__main__":
-    application = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
+    if video_files:
+        available_videos = [file for file in video_files if file not in user_limits['sent_videos']]
+
+        if not available_videos:
+            await update.message.reply_text("All videos have been sent today. Please try again tomorrow.", reply_markup=create_video_keyboard())
+            return
+
+        selected_video_file = random.choice(available_videos)
+
+        with open(os.path.join(directory, selected_video_file), 'r') as f:
+            video_data = json.load(f)
+
+        video_id = video_data['video_id']
+        await context.bot.send_video(chat_id=user_id, video=video_id)
+
+        if not unlimited_access:
+            if video_type.lower() == 'basic videos':
+                user_limits['basic'] += 1
+            else:
+                user_limits['premium'] += 1
+
+        user_limits['sent_videos'].append(selected_video_file)
+
+        limits[str(user_id)] = user_limits
+
+        with open(LIMIT_FILE, 'w') as f:
+            json.dump(limits, f)
+    else:
+        await update.message.reply_text("No videos available in the selected category.", reply_markup=create_video_keyboard())
+
+async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == ADMIN_ID:
+        video_file = update.message.video.file_id
+        context.user_data['last_video_file'] = video_file
+
+        await update.message.reply_text(
+            "Which directory would you like to save the video in?",
+            reply_markup=create_save_video_keyboard()
+        )
+    else:
+        await update.message.reply_text("You are not authorized to send videos.")
+
+async def handle_video_saving(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    video_id = context.user_data.get('last_video_file')
+    if video_id is None:
+        await query.message.reply_text("No video file to save.")
+        return
+
+    if query.data == 'save_basic':
+        directory = BASIC_VIDEO_DIR
+    elif query.data == 'save_premium':
+        directory = PREMIUM_VIDEO_DIR
+    else:
+        await query.message.reply_text("Invalid selection. Please select 'Save in Basic Videos' or 'Save in Premium Videos'.")
+        return
+
+    video_path = os.path.join(directory, f"{video_id}.json")
+
+    with open(video_path, 'w') as f:
+        json.dump({'video_id': video_id}, f)
+
+    await query.message.reply_text("Video ID saved successfully!")
+
+async def add_unlimited_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("You are not authorized to add users to the unlimited access list.")
+        return
+
+    if context.args:
+        user_id = int(context.args[0])
+        with open(UNLIMITED_USERS_FILE, 'r') as f:
+            unlimited_users = json.load(f)
+
+        if user_id not in unlimited_users:
+            unlimited_users.append(user_id)
+            with open(UNLIMITED_USERS_FILE, 'w') as f:
+                json.dump(unlimited_users, f)
+            await update.message.reply_text(f"User {user_id} has been granted unlimited access.")
+        else:
+            await update.message.reply_text(f"User {user_id} already has unlimited access.")
+    else:
+        await update.message.reply_text("Please provide a user ID.")
+
+async def clear_unlimited_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == ADMIN_ID:
+        with open(UNLIMITED_USERS_FILE, 'w') as f:
+            json.dump([], f)
+        await update.message.reply_text("The unlimited users list has been cleared.")
+    else:
+        await update.message.reply_text("You are not authorized to perform this action.")
+
+async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("You are not authorized to perform this action.")
+        return
+
+    context.user_data['broadcast_pending'] = True
+    await update.message.reply_text("Please send the video, photo, or text message you wish to broadcast. Use /cancelled to abort.")
+
+async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.user_data.get('broadcast_pending'):
+        description = update.message.caption if update.message.caption else None
+        with open(BROADCAST_USERS_FILE, 'r') as f:
+            broadcast_users = json.load(f)
+
+        # Check if the message contains a photo
+        if update.message.photo:
+            photo_file = update.message.photo[-1].file_id
+
+            for user_id in broadcast_users:
+                try:
+                    await context.bot.send_photo(chat_id=user_id, photo=photo_file, caption=description)
+                except Exception as e:
+                    print(f"Failed to send photo to {user_id}: {e}")
+
+            await update.message.reply_text("Broadcast photo sent successfully!")
+
+        # Check if the message contains a video
+        elif update.message.video:
+            video_file = update.message.video.file_id
+
+            for user_id in broadcast_users:
+                try:
+                    await context.bot.send_video(chat_id=user_id, video=video_file, caption=description)
+                except Exception as e:
+                    print(f"Failed to send video to {user_id}: {e}")
+
+            await update.message.reply_text("Broadcast video sent successfully!")
+
+        # Handle text broadcasting if only a description is provided without media
+        elif description:
+            for user_id in broadcast_users:
+                try:
+                    await context.bot.send_message(chat_id=user_id, text=description)
+                except Exception as e:
+                    print(f"Failed to send message to {user_id}: {e}")
+
+            await update.message.reply_text("Broadcast message sent successfully!")
+
+        else:
+            await update.message.reply_text("Please provide a message, video, or photo to broadcast.")
+
+        # Reset the broadcast pending state
+        context.user_data['broadcast_pending'] = False
+
+async def cancel_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.user_data.get('broadcast_pending'):
+        context.user_data['broadcast_pending'] = False
+        await update.message.reply_text("Broadcast has been cancelled.")
+    else:
+        await update.message.reply_text("No broadcast is currently in progress.")
+
+def main() -> None:
+    application = Application.builder().token("8118599107:AAFeLN26fLJrIWBFmzg3XdusIXg46Qchb30").build()  # Insert your token here
+
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))  # Listen on the specified port
+    application.add_handler(MessageHandler(filters.VIDEO, handle_video))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_video_type_selection))
+    application.add_handler(CallbackQueryHandler(handle_video_saving, pattern='save_basic|save_premium'))
+    application.add_handler(CommandHandler("add", add_unlimited_user))
+    application.add_handler(CommandHandler("clear", clear_unlimited_users))
+    application.add_handler(CommandHandler("broadcast", broadcast_message))
+    application.add_handler(MessageHandler(filters.TEXT | filters.VIDEO | filters.PHOTO, handle_broadcast_content))
+    application.add_handler(CommandHandler("cancelled", cancel_broadcast))
+
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
