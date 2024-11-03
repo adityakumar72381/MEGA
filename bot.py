@@ -7,7 +7,7 @@ from telegram import Update, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Bot token, Droplink API token, and channel ID
-BOT_TOKEN = "8118599107:AAFeLN26fLJrIWBFmzg3XdusIXg46Qchb30"
+BOT_TOKEN = "8118599107:AAG-3SdAiBBttJjSD6MAV19u9tyr4xTJVgk"
 DROPLINK_API_TOKEN = "d7d52615e08da763a299c3ed0fbc70f17cf29ebb"
 WORKER_URL = "https://masterworker.awadheshkumar7537.workers.dev/"
 VIDEO_MAPPING_FILE = 'video_mapping.json'
@@ -67,26 +67,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Check if the user has valid access
+    # Check if the user has valid access and resend the same link if requested within 24 hours
     if user_id in user_access:
         access_info = user_access[user_id]
         if access_info["expires_at"] > datetime.utcnow():
-            if args:
-                video_id = args[0]
-                video_mapping = load_video_mapping()
-                if video_id in video_mapping:
-                    await context.bot.send_video(chat_id=user_id, video=video_mapping[video_id])
-                    return
-            else:
-                await update.message.reply_text("You already have access to the bot. No new link needed.")
-                return
+            await update.message.reply_text(
+                f"You already have access! Here’s your link:\n{access_info['short_link']}"
+            )
+            return
         else:
-            del user_access[user_id]
+            del user_access[user_id]  # Remove expired access
 
-    # Generate a random number link and shorten it if the user does not have valid access
+    # Generate a new random number link and shorten it if the user does not have valid access
     random_number, short_link = create_shortened_link()
     if short_link:
-        user_access[user_id] = {"number": random_number, "expires_at": datetime.utcnow() + timedelta(hours=24)}
+        user_access[user_id] = {
+            "number": random_number,
+            "short_link": short_link,
+            "expires_at": datetime.utcnow() + timedelta(hours=24)
+        }
 
         message = f"Welcome! Please click the link below and send the number you see:\n{short_link}\n\n"
         if is_admin:
@@ -105,7 +104,7 @@ async def check_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in user_access:
         access_info = user_access[user_id]
         if user_response == str(access_info["number"]):
-            access_info["expires_at"] = datetime.now() + timedelta(hours=24)
+            access_info["expires_at"] = datetime.utcnow() + timedelta(hours=24)
             await update.message.reply_text("Correct! You now have access to the bot for 24 hours.")
         else:
             await update.message.reply_text("Incorrect number. Please try again.")
@@ -116,7 +115,7 @@ async def check_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    if user_id in user_access and user_access[user_id]["expires_at"] > datetime.now():
+    if user_id in user_access and user_access[user_id]["expires_at"] > datetime.utcnow():
         video_file_id = update.message.video.file_id
         unique_id = str(random.randint(1000, 9999))
         video_link = f"https://t.me/{context.bot.username}?start={unique_id}"
