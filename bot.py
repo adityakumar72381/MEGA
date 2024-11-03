@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from telegram import Update, ChatMember
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Replace with your bot token, Droplink API token, and the channel ID
+# Bot token, Droplink API token, and channel ID
 BOT_TOKEN = "8118599107:AAFeLN26fLJrIWBFmzg3XdusIXg46Qchb30"
-DROPLINK_API_TOKEN = "7d52615e08da763a299c3ed0fbc70f17cf29ebb"
+DROPLINK_API_TOKEN = "d7d52615e08da763a299c3ed0fbc70f17cf29ebb"
 WORKER_URL = "https://masterworker.awadheshkumar7537.workers.dev/"
 VIDEO_MAPPING_FILE = 'video_mapping.json'
 CHANNEL_ID = "@hdhdhdhdhdjdjdjrhrhrhrh"
@@ -44,7 +44,7 @@ def create_shortened_link():
         return random_number, None
 
 # Function to check channel membership and admin status
-async def check_membership_and_admin(user_id: int, context) -> (bool, bool):
+async def check_membership_and_admin(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> (bool, bool):
     try:
         chat_member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
         is_member = chat_member.status in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]
@@ -57,9 +57,9 @@ async def check_membership_and_admin(user_id: int, context) -> (bool, bool):
 # Start command handler with video ID check
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    args = context.args  # Retrieve arguments passed with the command
+    args = context.args
 
-    # Check if the user is a member and admin of the required channel
+    # Check if the user is a member of the required channel
     is_member, is_admin = await check_membership_and_admin(user_id, context)
     if not is_member:
         await update.message.reply_text(
@@ -67,30 +67,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Check if the user already has access
-    if user_id in user_access and user_access[user_id]["expires_at"] > datetime.utcnow():
-        if args:
-            video_id = args[0]
-            video_mapping = load_video_mapping()
-            if video_id in video_mapping:
-                await context.bot.send_video(chat_id=user_id, video=video_mapping[video_id])
+    # Check if the user has valid access
+    if user_id in user_access:
+        access_info = user_access[user_id]
+        if access_info["expires_at"] > datetime.utcnow():
+            if args:
+                video_id = args[0]
+                video_mapping = load_video_mapping()
+                if video_id in video_mapping:
+                    await context.bot.send_video(chat_id=user_id, video=video_mapping[video_id])
+                    return
+            else:
+                await update.message.reply_text("You already have access to the bot. No new link needed.")
                 return
         else:
-            await update.message.reply_text("You already have access to the bot. No new link needed.")
-            return
+            del user_access[user_id]
 
-    # Generate a random number link and shorten it
+    # Generate a random number link and shorten it if the user does not have valid access
     random_number, short_link = create_shortened_link()
     if short_link:
         user_access[user_id] = {"number": random_number, "expires_at": datetime.utcnow() + timedelta(hours=24)}
 
-        # Message to be sent with the shortened link
         message = f"Welcome! Please click the link below and send the number you see:\n{short_link}\n\n"
-
-        # If the user is an admin, include the code in the message
         if is_admin:
             message += f"As an admin, here’s your code directly: {random_number}\n\n"
-
         message += "After sending the correct number, you'll get access for 24 hours."
 
         await update.message.reply_text(message)
@@ -105,7 +105,7 @@ async def check_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in user_access:
         access_info = user_access[user_id]
         if user_response == str(access_info["number"]):
-            access_info["expires_at"] = datetime.utcnow() + timedelta(hours=24)
+            access_info["expires_at"] = datetime.now() + timedelta(hours=24)
             await update.message.reply_text("Correct! You now have access to the bot for 24 hours.")
         else:
             await update.message.reply_text("Incorrect number. Please try again.")
@@ -116,7 +116,7 @@ async def check_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    if user_id in user_access and user_access[user_id]["expires_at"] > datetime.utcnow():
+    if user_id in user_access and user_access[user_id]["expires_at"] > datetime.now():
         video_file_id = update.message.video.file_id
         unique_id = str(random.randint(1000, 9999))
         video_link = f"https://t.me/{context.bot.username}?start={unique_id}"
