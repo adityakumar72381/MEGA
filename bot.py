@@ -116,8 +116,8 @@ async def handle_video_request(update: Update, context: ContextTypes.DEFAULT_TYP
             json.dump(tokens, f)
 
         long_url = f"https://telegram.dog/{context.bot.username}?start={token}"
-        api_key = "5aeefe88b73cb53413d33bd6532adebe17c9c970"
-        shorten_url = f"https://teraboxlinks.com/api?api={api_key}&url={long_url}&format=text"
+        api_key = "04a9f13387c0aedee5ad84e98efe6928431eefed"
+        shorten_url = f"https://linkpays.in/api?api={api_key}&url={long_url}&format=text"
         response = requests.get(shorten_url)
         short_link = response.text.strip()
         await update.message.reply_text(
