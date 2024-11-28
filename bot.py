@@ -93,10 +93,13 @@ async def handle_video_request(update: Update, context: ContextTypes.DEFAULT_TYP
     user_id = update.message.chat.id
     chat_member = await context.bot.get_chat_member(PRIVATE_CHANNEL_ID, user_id)
     if chat_member.status not in ["member", "administrator", "creator"]:
-        await update.message.reply_text("Subscribe to the channel first!\nपहले चैनल को सब्सक्राइब करें!", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Ddose main [official]", url=PRIVATE_CHANNEL_INVITE_LINK)],
-            [InlineKeyboardButton("Verify Now", callback_data="verify_membership")]
-        ]))
+        await update.message.reply_text(
+            "Subscribe to the channel first!\nपहले चैनल को सब्सक्राइब करें!",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Ddose main [official]", url=PRIVATE_CHANNEL_INVITE_LINK)],
+                [InlineKeyboardButton("Verify Now", callback_data="verify_membership")]
+            ])
+        )
         return
 
     with open(LIMIT_FILE, 'r') as f:
@@ -107,6 +110,20 @@ async def handle_video_request(update: Update, context: ContextTypes.DEFAULT_TYP
         user_limits = {"date": current_date, "basic": 0, "sent_videos": []}
 
     unlimited_access = has_unlimited_access(user_id)
+    total_videos_sent = user_limits['basic'] + len(user_limits['sent_videos'])
+
+    # Check if the user has reached the total daily limit of 40 videos
+    if not unlimited_access and total_videos_sent >= 40:
+        await update.message.reply_text(
+            "You have reached your daily limit of 40 videos. Come back tomorrow or purchase a membership.\n"
+            "आज की 40 वीडियो की सीमा पूरी हो चुकी है। कल वापस आएं या मेंबरशिप खरीदें।",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Contact Admin", url="https://t.me/Ddose_membership_contactbot")]
+            ])
+        )
+        return
+
+    # Token logic
     if not unlimited_access and user_limits['basic'] >= 10:
         token = secrets.token_urlsafe(16)
         with open(TOKENS_FILE, 'r') as f:
@@ -116,22 +133,28 @@ async def handle_video_request(update: Update, context: ContextTypes.DEFAULT_TYP
             json.dump(tokens, f)
 
         long_url = f"https://telegram.dog/{context.bot.username}?start={token}"
-        api_key = "04a9f13387c0aedee5ad84e98efe6928431eefed"
-        shorten_url = f"https://linkpays.in/api?api={api_key}&url={long_url}&format=text"
+        api_key = "5aeefe88b73cb53413d33bd6532adebe17c9c970"
+        shorten_url = f"https://teraboxlinks.com/api?api={api_key}&url={long_url}&format=text"
         response = requests.get(shorten_url)
         short_link = response.text.strip()
         await update.message.reply_text(
-    "𝗬𝗼𝘂𝗿 𝗔𝗱𝘀 𝘁𝗼𝗸𝗲𝗻 𝗶𝘀 𝗲𝘅𝗽𝗶𝗿𝗲𝗱, 𝗿𝗲𝗳𝗿𝗲𝘀𝗵 𝘆𝗼𝘂𝗿 𝘁𝗼𝗸𝗲𝗻 𝗮𝗻𝗱 𝘁𝗿𝘆 𝗮𝗴𝗮𝗶𝗻.\n\n𝗧𝗼𝗸𝗲𝗻 𝘁𝗶𝗺𝗲𝗼𝘂𝘁: 𝗙𝗼𝗿 𝟯𝟬 𝘃𝗶𝗱𝗲𝗼 (𝗼𝗻𝗹𝘆 𝗧𝗼𝗱𝗮𝘆)\n\n𝗪𝗵𝗮𝘁 𝗶𝘀 𝘁𝗼𝗸𝗲𝗻?\n\n𝗜𝘁 𝗶𝘀 𝘃𝗲𝗿𝘆 𝗲𝗮𝘀𝘆 𝗷𝘂𝘀𝘁 𝘁𝗮𝗽 𝗼𝗻 𝗹𝗶𝗻𝗸 𝘄𝗮𝗶𝘁 𝟭𝟱 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 𝘁𝗵𝗲𝗻 𝗴𝗼 𝘁𝗼 𝘁𝗵𝗲 𝗹𝗮𝘀𝘁 𝗼𝗳 𝗽𝗮𝗴𝗲 𝗮𝗻𝗱 𝘁𝗮𝗽 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲 𝘁𝗵𝗮𝘁𝘀 𝗶𝘁\n\n"
-     f"<a href='{short_link}'>CLICK HERE</a>",
-    parse_mode='HTML')
+            "𝗬𝗼𝘂𝗿 𝗔𝗱𝘀 𝘁𝗼𝗸𝗲𝗻 𝗶𝘀 𝗲𝘅𝗽𝗶𝗿𝗲𝗱, 𝗿𝗲𝗳𝗿𝗲𝘀𝗵 𝘆𝗼𝘂𝗿 𝘁𝗼𝗸𝗲𝗻 𝗮𝗻𝗱 𝘁𝗿𝘆 𝗮𝗴𝗮𝗶𝗻.\n\n𝗧𝗼𝗸𝗲𝗻 𝘁𝗶𝗺𝗲𝗼𝘂𝘁: 𝗙𝗼𝗿 𝟯𝟬 𝘃𝗶𝗱𝗲𝗼 (𝗼𝗻𝗹𝘆 𝗧𝗼𝗱𝗮𝘆)\n\n𝗜𝘁 𝗶𝘀 𝘃𝗲𝗿𝘆 𝗲𝗮𝘀𝘆 𝗷𝘂𝘀𝘁 𝘁𝗮𝗽 𝗼𝗻 𝗹𝗶𝗻𝗸 𝘄𝗮𝗶𝘁 𝟭𝟱 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 𝘁𝗵𝗲𝗻 𝗴𝗼 𝘁𝗼 𝘁𝗵𝗲 𝗹𝗮𝘀𝘁 𝗼𝗳 𝗽𝗮𝗴𝗲 𝗮𝗻𝗱 𝘁𝗮𝗽 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲 𝘁𝗵𝗮𝘁𝘀 𝗶𝘁\n\n"
+            f"<a href='{short_link}'>CLICK HERE</a>",
+            parse_mode='HTML'
+        )
         return
 
+    # Fetch and send video
     video_files = os.listdir(BASIC_VIDEO_DIR)
     if video_files:
         available_videos = [file for file in video_files if file not in user_limits['sent_videos']]
         if not available_videos:
-            await update.message.reply_text("All videos sent. Try again tomorrow or purchase membership. Contact [admin](https://t.me/Ddose_membership_contactbot) now" ,
-              parse_mode='Markdown' )
+            await update.message.reply_text(
+                "All videos sent. Try again tomorrow or purchase membership.\nसभी वीडियो भेज दी गई हैं। कल वापस आएं या मेंबरशिप खरीदें।",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Contact Admin", url="https://t.me/Ddose_membership_contactbot")]
+                ])
+            )
             return
 
         selected_video_file = random.choice(available_videos)
