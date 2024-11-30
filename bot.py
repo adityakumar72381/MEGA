@@ -17,7 +17,7 @@ TOKENS_FILE = 'tokens.json'
 PRIVATE_CHANNEL_ID = -1002412363758  # Replace with your private channel ID
 PRIVATE_CHANNEL_INVITE_LINK = "https://t.me/+AejfSbyPvZdjY2E1"  # Replace with your channel invite link
 ADMIN_ID = 6128121762  # Your admin ID
-BOT_TOKEN = "7888078084:AAHTXqISPudFqKspHQQUOGGRSyBVQ6lWJNw"  # Replace with your bot token
+BOT_TOKEN = "7888078084:AAF6kXUhkC7l_tOJJGLctT-ND3p1Sa_Q30M"  # Replace with your bot token
 STICKER_ID = "CAACAgUAAxkBAAKFZGcbti0amQABJBstAAHv6t5QtIL-gd0AAgQAA8EkMTGJ5R1uC7PIEDYE"
 
 # Create necessary directories and files
