@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 # Main Bot Token
-BOT_TOKEN = "8118599107:AAGv2gAN8cj-vTGHca-FnjK1QFsQB9EE0HQ"
+BOT_TOKEN = "7764136517:AAHip_csVx36mvmkwMqLcg5GXvYd7FhqAEo"
 API_URL_TEMPLATE = "https://api.telegram.org/bot{}/setMessageReaction"
 
 # List to store tokens of all bots (main and cloned)
