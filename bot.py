@@ -4,7 +4,7 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-# Main Bot Token
+# Maoken
 BOT_TOKEN = "7764136517:AAHip_csVx36mvmkwMqLcg5GXvYd7FhqAEo"
 API_URL_TEMPLATE = "https://api.telegram.org/bot{}/setMessageReaction"
 
