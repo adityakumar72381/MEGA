@@ -1,66 +1,64 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters, CallbackQueryHandler
-import aiohttp
+import aiohttp  # For asynchronous HTTP requests
 import asyncio
 import logging
 
-# Replace with your bot toke
-# Replace with your bot token
-BOT_TOKEN = "7764136517:AAGLKNQ5LZhmCGhCvtenteq72jbJD4sDXf0"
 
-# API Endpoints
-API_URL_CHANNEL = "https://reactions3.adityakumar72381.workers.dev/"  # First API for channel messages
-API_URL_BOT_CHAT = "https://reactionbot.adityakumar72381.workers.dev/"  # Second API for bot chat messa
+# Replace with your bot token
+BOT_TOKEN = "7764136517:AAGhBVEdMZwrnnp6j28x1TfoLkH7xxjdzDI"
+
+# API Endpoint to send reactions
+API_URL = "https://reactions3.adityakumar72381.workers.dev/"
+
 # Admin Contact Info
-ADMIN_CHAT_ID = "6128121762"
+ADMIN_CHAT_ID = "6128121762"  # Replace with the actual admin's chat ID
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def send_reaction_to_api(api_url: str, chat_id: int, message_id: int):
-    """Send reaction asynchronously to the given API."""
+
+async def send_reaction_async(chat_id: int, message_id: int):
+    """Send reaction asynchronously to the API."""
     payload = {
         "chat_id": chat_id,
         "message_id": message_id
     }
-
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(api_url, json=payload) as response:
+            async with session.post(API_URL, json=payload) as response:
                 if response.status == 200:
-                    logger.info(f"Reaction sent successfully to {api_url} for message ID {message_id}")
+                    logger.info(f"Reaction sent successfully for message ID {message_id}")
                 else:
-                    logger.error(f"Failed to send reaction to {api_url}: {response.status} - {await response.text()}")
+                    logger.error(f"Failed to send reaction: {response.status} - {await response.text()}")
     except Exception as e:
-        logger.error(f"Error sending reaction to {api_url}: {e}")
+        logger.error(f"Error sending reaction: {e}")
+
 
 async def handle_update(update: Update, context: CallbackContext):
-    """Handle incoming updates and send reactions."""
+    """Handles incoming updates and extracts chat_id and message_id."""
     try:
         if update.message:
             chat_id = update.message.chat_id
             message_id = update.message.message_id
-            if update.message.chat.type == "channel":
-                api_url = API_URL_CHANNEL
-                logger.info("Detected message from a channel.")
-            else:
-                api_url = API_URL_BOT_CHAT
-                logger.info("Detected message from bot chat.")
-            asyncio.create_task(send_reaction_to_api(api_url, chat_id, message_id))
         elif update.channel_post:
             chat_id = update.channel_post.chat_id
             message_id = update.channel_post.message_id
-            logger.info("Detected channel post.")
-            asyncio.create_task(send_reaction_to_api(API_URL_CHANNEL, chat_id, message_id))
         else:
             logger.warning("Update does not contain a message or channel post.")
+            return
+
+        logger.info(f"Received chat_id: {chat_id}, message_id: {message_id}")
+        asyncio.create_task(send_reaction_async(chat_id, message_id))
+
     except Exception as e:
         logger.error(f"Error handling update: {e}")
 
+
 async def start(update: Update, context: CallbackContext):
     """Handle the /start command."""
-    user_name = update.message.from_user.first_name  # Correctly fetch the user's first name
+    user_name = update.message.from_user.first_name
     welcome_message = f"""
 *👋 Hello there, {user_name}!*
 
@@ -68,11 +66,10 @@ async def start(update: Update, context: CallbackContext):
 
 💁‍♂️ *Here's how I spice up your chats:*
 
-🏖 *Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
+🏖 * Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
 
 *Note:* _You must add me to the channel before adding cloned bots._
     """
-
     keyboard = [
         [InlineKeyboardButton("✨ Want more reactions?", callback_data="more_reactions")],
         [InlineKeyboardButton("👥 Join our community", url="https://t.me/automated_world")],
@@ -83,13 +80,13 @@ async def start(update: Update, context: CallbackContext):
         welcome_message, parse_mode="Markdown", reply_markup=reply_markup
     )
 
+
 async def button_callback(update: Update, context: CallbackContext):
     """Handle inline button presses."""
     query = update.callback_query
     await query.answer()  # Acknowledge the button press
 
     if query.data == "more_reactions":
-        # Send the list of available bots
         bot_list = """
 Here are some bots you can add to your channels for more reactions:
 
@@ -105,14 +102,13 @@ Here are some bots you can add to your channels for more reactions:
   Bot 10 - @Reactiongiver10bot
         """
         keyboard = [
-            [InlineKeyboardButton("📞 Contact Admin", url="https://t.me/Yoursadityaaa")],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")],
+            [InlineKeyboardButton("Contact admin for more reactions", url="https://t.me/Yoursadityaaa")],
+            [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(bot_list, reply_markup=reply_markup)
 
     elif query.data == "back_to_start":
-        # Edit the existing message, no new message sent
         user_name = query.from_user.first_name
         welcome_message = f"""
 *👋 Hello there, {user_name}!*
@@ -121,7 +117,7 @@ Here are some bots you can add to your channels for more reactions:
 
 💁‍♂️ *Here's how I spice up your chats:*
 
-🏖 *Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
+🏖 * Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
 
 *Note:* _You must add me to the channel before adding cloned bots._
         """
@@ -131,22 +127,21 @@ Here are some bots you can add to your channels for more reactions:
             [InlineKeyboardButton("📞 Contact support", url="https://t.me/Yoursadityaaa")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            welcome_message, parse_mode="Markdown", reply_markup=reply_markup
-        )
+        await query.edit_message_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
+
 
 def main():
     """Start the bot."""
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # Add handlers
+    # Add handlers for commands and messages
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.ALL, handle_update))
     application.add_handler(CallbackQueryHandler(button_callback))
 
-    # Start the bot
     application.run_polling()
     logger.info("Bot started...")
+
 
 if __name__ == "__main__":
     main()
