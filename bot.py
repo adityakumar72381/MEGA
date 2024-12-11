@@ -6,7 +6,7 @@ import logging
 
 # Replace with your bot toke
 # Replace with your bot token
-BOT_TOKEN = "7764136517:AAHzhFAO7FVHtyz-7fpxBeC0Yir9R5KqMTo"
+BOT_TOKEN = "7764136517:AAGLKNQ5LZhmCGhCvtenteq72jbJD4sDXf0"
 
 # API Endpoints
 API_URL_CHANNEL = "https://reactions3.adityakumar72381.workers.dev/"  # First API for channel messages
