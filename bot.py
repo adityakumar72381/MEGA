@@ -8,20 +8,13 @@ from telegram.ext import (
 import aiohttp
 
 # Replace with your bot token
-BOT_TOKEN = "7764136517:AAF76pABfIfdc7llWnJ1blRa26Y6uBwDfMg"
+BOT_TOKEN = "7764136517:AAFlAEhA7NvX5zz41imUbEPCI_lnvushgLw"
 
 # API Endpoint to send reactions
 API_URL = "https://reactions3.adityakumar72381.workers.dev/"
 
 # Admin Contact Info
-ADMIN_CHAT_ID = "6128121762"  # Replace with the actual admin's chat ID
 PRIVATE_CHANNEL_ID = "-1002344830926"  # Your admin channel's chat ID
-USER_MESSAGE_ID = 6  # Message ID for storing user IDs
-CHANNEL_MESSAGE_ID = 7  # Message ID for storing channel IDs
-
-# Global variables for storing user and channel details
-user_message = "User IDs:\n"
-channel_message = "Channel IDs:\n"
 
 # Enable logging
 logging.basicConfig(
@@ -30,17 +23,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Helper: Send Reaction
-async def send_reaction_async(chat_id: int, message_id: int):
+async def send_reaction_async(chat_id: int, message_id: int, context: CallbackContext):
     payload = {"chat_id": chat_id, "message_id": message_id}
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(API_URL, json=payload) as response:
                 if response.status == 200:
-                    logger.info(f"Reaction sent successfully for message ID {message_id}")
+                    status = "✅ Successful"
                 else:
-                    logger.error(f"Failed to send reaction: {response.status} - {await response.text()}")
+                    status = f"❌ Failed: {response.status} - {await response.text()}"
+
+                # Message Link for Admin Notification
+                message_link = f"https://t.me/c/{str(chat_id)[4:]}/{message_id}" if str(chat_id).startswith("-100") else "Private Message"
+
+                # Send update to admin channel
+                await context.bot.send_message(
+                    chat_id=PRIVATE_CHANNEL_ID,
+                    text=(
+                        f"📩 **Reaction Update**\n\n"
+                        f"**Channel ID**: `{chat_id}`\n"
+                        f"**Message Link**: [View Message]({message_link})\n"
+                        f"**Message ID**: `{message_id}`\n"
+                        f"**Status**: {status}"
+                    ),
+                    parse_mode="Markdown",
+                )
     except Exception as e:
         logger.error(f"Error sending reaction: {e}")
+        await context.bot.send_message(
+            chat_id=PRIVATE_CHANNEL_ID,
+            text=f"❌ **Error Sending Reaction**: {e}",
+        )
 
 # Handle Messages and Reactions
 async def handle_update(update: Update, context: CallbackContext):
@@ -55,27 +68,25 @@ async def handle_update(update: Update, context: CallbackContext):
             return
 
         logger.info(f"Received chat_id: {chat_id}, message_id: {message_id}")
-        asyncio.create_task(send_reaction_async(chat_id, message_id))
+        asyncio.create_task(send_reaction_async(chat_id, message_id, context))
     except Exception as e:
         logger.error(f"Error handling update: {e}")
 
 # Handle /start Command
 async def start(update: Update, context: CallbackContext):
-    global user_message
-
     user_id = update.effective_user.id
     user_name = update.message.from_user.first_name
 
-    # Check if the user ID is already present
-    if str(user_id) not in user_message:
-        user_message += f"{user_id}\n"
-
-        # Edit the user message in the admin channel
-        await context.bot.edit_message_text(
-            chat_id=PRIVATE_CHANNEL_ID,
-            message_id=USER_MESSAGE_ID,
-            text=user_message,
-        )
+    # Notify the admin channel
+    await context.bot.send_message(
+        chat_id=PRIVATE_CHANNEL_ID,
+        text=(
+            f"👤 **New User Alert**\n\n"
+            f"**User Name**: [Click Here](tg://user?id={user_id})\n"
+            f"**User ID**: `{user_id}`"
+        ),
+        parse_mode="Markdown",
+    )
 
     # Reply to the user
     welcome_message = f"""
@@ -90,7 +101,7 @@ async def start(update: Update, context: CallbackContext):
 *Note:* _You must add me to the channel before adding cloned bots._
     """
     keyboard = [
-        [InlineKeyboardButton("✨ More reactions ??", callback_data="more_reactions")],
+        [InlineKeyboardButton("✨ More reactions", callback_data="more_reactions")],
         [InlineKeyboardButton("👥 Join our community", url="https://t.me/automated_world")],
         [InlineKeyboardButton("📞 Contact support", url="https://t.me/Yoursadityaaa")],
     ]
@@ -115,7 +126,7 @@ Here are some bots you can add to your channels for more reactions:
 7. Bot 7 - @Reactiongivers7bot
 8. Bot 8 - @Reactiongivers8bot
 9. Bot 9 - @Reactiongivers9bot
-  Bot 10 - @Reactiongiver10bot
+10. Bot 10 - @Reactiongiver10bot
         """
         keyboard = [
             [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
@@ -146,36 +157,21 @@ Here are some bots you can add to your channels for more reactions:
 
 # Track Channels When Added
 async def handle_chat_member(update: Update, context: CallbackContext):
-    global channel_message
-
     chat = update.effective_chat
     if update.my_chat_member.new_chat_member.status == "administrator":
         channel_id = chat.id
         channel_name = chat.title
-        channel_link = f"https://t.me/{chat.username}" if chat.username else "Private Channel"
 
-        # Add channel to the list
-        if str(channel_id) not in channel_message:
-            channel_message += f"{channel_id} - {channel_name}\n"
-
-            # Update the channel message in the admin channel
-            await context.bot.edit_message_text(
-                chat_id=PRIVATE_CHANNEL_ID,
-                message_id=CHANNEL_MESSAGE_ID,
-                text=channel_message,
-            )
-
-            # Notify the admin channel
-            await context.bot.send_message(
-                chat_id=PRIVATE_CHANNEL_ID,
-                text=(
-                    f"📢 Bot added to a new channel!\n"
-                    f"**Channel Name**: {channel_name}\n"
-                    f"**Channel ID**: `{channel_id}`\n"
-                    f"**Channel Link**: {channel_link}"
-                ),
-                parse_mode="Markdown",
-            )
+        # Notify the admin channel
+        await context.bot.send_message(
+            chat_id=PRIVATE_CHANNEL_ID,
+            text=(
+                f"📢 Bot added to a new channel!\n"
+                f"**Channel Name**: {channel_name}\n"
+                f"**Channel ID**: `{channel_id}`"
+            ),
+            parse_mode="Markdown",
+        )
 
 # Main Function to Run the Bot
 def main():
