@@ -8,7 +8,7 @@ from telegram.ext import (
 import aiohttp
 
 # Replace with your bot token
-BOT_TOKEN = "7764136517:AAGhBVEdMZwrnnp6j28x1TfoLkH7xxjdzDI"
+BOT_TOKEN = "7764136517:AAF76pABfIfdc7llWnJ1blRa26Y6uBwDfMg"
 
 # API Endpoint to send reactions
 API_URL = "https://reactions3.adityakumar72381.workers.dev/"
