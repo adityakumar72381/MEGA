@@ -3,8 +3,7 @@ import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackContext, CallbackQueryHandler,
-    ChatMemberHandler, filters
-)
+    ChatMemberHandler, filters)
 import aiohttp
 
 # Replace with your bot token
@@ -107,32 +106,43 @@ async def start(update: Update, context: CallbackContext):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Handle Inline Button Actions
+        # Handle Inline Button Actions
 async def button_callback(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
 
     if query.data == "more_reactions":
         bot_list = """
-Here are some bots you can add to your channels for more reactions:
-
-1. Bot 1 - @Reactiongivers1bot
-2. Bot 2 - @Reactiongivers2bot
-3. Bot 3 - @Reactiongivers3bot
-4. Bot 4 - @Reactiongivers4bot
-5. Bot 5 - @Reactiongivers5bot
-6. Bot 6 - @Reactiongivers6bot
-7. Bot 7 - @Reactiongivers7bot
-8. Bot 8 - @Reactiongivers8bot
-9. Bot 9 - @Reactiongivers9bot
-10. Bot 10 - @Reactiongiver10bot
-        """
+Here are some bots you can add to your channels for more reactions:"""
         keyboard = [
+            [InlineKeyboardButton("MAIN BOT", url="https://t.me/auto_reactionssbot?startchannel=add")],
+            [
+                InlineKeyboardButton("REACTION 1", url="https://t.me/Reactiongivers1bot?startchannel=add"),
+                InlineKeyboardButton("REACTION 2", url="https://t.me/Reactiongivers2bot?startchannel=add")
+            ],
+            [
+                InlineKeyboardButton("REACTION 3", url="https://t.me/Reactiongivers3bot?startchannel=add"),
+                InlineKeyboardButton("REACTION 4", url="https://t.me/Reactiongivers4bot?startchannel=add")
+            ],
+            [
+                InlineKeyboardButton("REACTION 5", url="https://t.me/Reactiongivers5bot?startchannel=add"),
+                InlineKeyboardButton("REACTION 6", url="https://t.me/Reactiongivers6bot?startchannel=add")
+            ],
+            [
+                InlineKeyboardButton("REACTION 7", url="https://t.me/Reactiongivers7bot?startchannel=add"),
+                InlineKeyboardButton("REACTION 8", url="https://t.me/Reactiongivers8bot?startchannel=add")
+            ],
+            [
+                InlineKeyboardButton("REACTION 9", url="https://t.me/Reactiongivers9bot?startchannel=add"),
+                InlineKeyboardButton("REACTION 10", url="https://t.me/Reactiongiver10bot?startchannel=add")
+            ],
             [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(bot_list, reply_markup=reply_markup)
+    
+
+
 
     elif query.data == "back_to_start":
         user_name = query.from_user.first_name
