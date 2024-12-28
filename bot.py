@@ -136,6 +136,26 @@ Here are some bots you can add to your channels for more reactions:"""
                 InlineKeyboardButton("REACTION 9", url="https://t.me/Reactiongivers9bot?startchannel=add"),
                 InlineKeyboardButton("REACTION 10", url="https://t.me/Reactiongiver10bot?startchannel=add")
             ],
+            [
+                InlineKeyboardButton("REACTION 11", url="https://t.me/Reactiongiver11bot?startchannel=add"),
+        InlineKeyboardButton("REACTION 12", url="https://t.me/Reactiongiver12bot?startchannel=add")
+    ],
+    [
+        InlineKeyboardButton("REACTION 13", url="https://t.me/Reactiongive13bot?startchannel=add"),
+        InlineKeyboardButton("REACTION 14", url="https://t.me/Reactiongive14bot?startchannel=add")
+    ],
+    [
+        InlineKeyboardButton("REACTION 15", url="https://t.me/Reactiongive15bot?startchannel=add"),
+        InlineKeyboardButton("REACTION 16", url="https://t.me/Reactiongive16bot?startchannel=add")
+    ],
+    [
+        InlineKeyboardButton("REACTION 17", url="https://t.me/Reactiongive17bot?startchannel=add"),
+        InlineKeyboardButton("REACTION 18", url="https://t.me/Reactiongive18bot?startchannel=add")
+    ],
+    [
+        InlineKeyboardButton("REACTION 19", url="https://t.me/Reactiongive19bot?startchannel=add"),
+        InlineKeyboardButton("REACTION 20", url="https://t.me/Reactiongive20bot?startchannel=add")
+    ],
             [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
