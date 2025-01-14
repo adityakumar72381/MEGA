@@ -1,219 +1,67 @@
-import logging
-import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler, CallbackContext, CallbackQueryHandler,
-    ChatMemberHandler, filters)
-import aiohttp
+from mega import Mega
+from pyrogram import Client, filters
+import os
 
-# Replace with your bot token
-BOT_TOKEN = "7764136517:AAFlAEhA7NvX5zz41imUbEPCI_lnvushgLw"
+# MEGA credentials
+MEGA_EMAIL = "adityakumar72381@gmail.com"
+MEGA_PASSWORD = "a1d2i3t4y5a6"
 
-# API Endpoint to send reactions
-API_URL = "https://reactions3.adityakumar72381.workers.dev/"
+# Telegram bot credentials
+API_ID = "25396020"
+API_HASH = "228ea638bed51dd4ae3cc9e4e51e198c"
+BOT_TOKEN = "7508849360:AAFmc5bxm5rgHTkocv9iFOgHWap6tX-ZIrg"
 
-# Admin Contact Info
-PRIVATE_CHANNEL_ID = "-1002344830926"  # Your admin channel's chat ID
+# Initialize MEGA client
+mega = Mega()
+mega_client = mega.login(MEGA_EMAIL, MEGA_PASSWORD)
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Initialize Telegram bot
+app = Client("mega_download_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Helper: Send Reaction
-async def send_reaction_async(chat_id: int, message_id: int, context: CallbackContext):
-    payload = {"chat_id": chat_id, "message_id": message_id}
+# Temporary download folder
+DOWNLOAD_FOLDER = "downloads/"
+
+# Ensure the download folder exists
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
+@app.on_message(filters.command("start"))
+def start(_, message):
+    message.reply_text("Send me a MEGA folder link, and I'll download the files one by one for you!")
+
+@app.on_message(filters.regex(r"https://mega.nz/folder/.*"))
+def download_mega_folder(_, message):
+    folder_link = message.text.strip()
+    message.reply_text("Processing your MEGA folder link...")
+
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(API_URL, json=payload) as response:
-                if response.status == 200:
-                    status = "✅ Successful"
-                else:
-                    status = f"❌ Failed: {response.status} - {await response.text()}"
+        # Get the folder details
+        folder = mega_client.get_public_folder(folder_link)
+        files = folder["folder"]["files"]
 
-                # Message Link for Admin Notification
-                message_link = f"https://t.me/c/{str(chat_id)[4:]}/{message_id}" if str(chat_id).startswith("-100") else "Private Message"
-
-                # Send update to admin channel
-                await context.bot.send_message(
-                    chat_id=PRIVATE_CHANNEL_ID,
-                    text=(
-                        f"📩 **Reaction Update**\n\n"
-                        f"**Channel ID**: `{chat_id}`\n"
-                        f"**Message Link**: [View Message]({message_link})\n"
-                        f"**Message ID**: `{message_id}`\n"
-                        f"**Status**: {status}"
-                    ),
-                    parse_mode="Markdown",
-                )
-    except Exception as e:
-        logger.error(f"Error sending reaction: {e}")
-        await context.bot.send_message(
-            chat_id=PRIVATE_CHANNEL_ID,
-            text=f"❌ **Error Sending Reaction**: {e}",
-        )
-
-# Handle Messages and Reactions
-async def handle_update(update: Update, context: CallbackContext):
-    try:
-        if update.message:
-            chat_id = update.message.chat_id
-            message_id = update.message.message_id
-        elif update.channel_post:
-            chat_id = update.channel_post.chat_id
-            message_id = update.channel_post.message_id
-        else:
+        if not files:
+            message.reply_text("The folder is empty.")
             return
 
-        logger.info(f"Received chat_id: {chat_id}, message_id: {message_id}")
-        asyncio.create_task(send_reaction_async(chat_id, message_id, context))
+        # Loop through files and send them
+        for file in files:
+            file_name = file["a"]["n"]
+            file_size = file["s"]
+            message.reply_text(f"Downloading: {file_name} ({file_size} bytes)")
+
+            # Download file
+            file_path = mega_client.download_url(file["g"], dest_filename=os.path.join(DOWNLOAD_FOLDER, file_name))
+
+            # Send file
+            message.reply_document(file_path)
+            
+            # Remove file after sending
+            os.remove(file_path)
+
+        message.reply_text("All files have been sent!")
+
     except Exception as e:
-        logger.error(f"Error handling update: {e}")
-
-# Handle /start Command
-async def start(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    user_name = update.message.from_user.first_name
-
-    # Notify the admin channel
-    await context.bot.send_message(
-        chat_id=PRIVATE_CHANNEL_ID,
-        text=(
-            f"👤 **New User Alert**\n\n"
-            f"**User Name**: [Click Here](tg://user?id={user_id})\n"
-            f"**User ID**: `{user_id}`"
-        ),
-        parse_mode="Markdown",
-    )
-
-    # Reply to the user
-    welcome_message = f"""
-*👋 Hello there, {user_name}!*
-
-*Welcome to the Auto Reaction Bot 🎉*, ready to sprinkle your conversations with a little extra happiness!
-
-💁‍♂️ *Here's how I spice up your chats:*
-
-🏖 * Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
-
-*Note:* _You must add me to the channel before adding cloned bots._
-    """
-    keyboard = [
-        [InlineKeyboardButton("✨ More reactions", callback_data="more_reactions")],
-        [InlineKeyboardButton("👥 Join our community", url="https://t.me/automated_world")],
-        [InlineKeyboardButton("📞 Contact support", url="https://t.me/Yoursadityaaa")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
-        # Handle Inline Button Actions
-async def button_callback(update: Update, context: CallbackContext):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "more_reactions":
-        bot_list = """
-Here are some bots you can add to your channels for more reactions:"""
-        keyboard = [
-            [InlineKeyboardButton("MAIN BOT", url="https://t.me/auto_reactionssbot?startchannel=add")],
-            [
-                InlineKeyboardButton("REACTION 1", url="https://t.me/Reactiongivers1bot?startchannel=add"),
-                InlineKeyboardButton("REACTION 2", url="https://t.me/Reactiongivers2bot?startchannel=add")
-            ],
-            [
-                InlineKeyboardButton("REACTION 3", url="https://t.me/Reactiongivers3bot?startchannel=add"),
-                InlineKeyboardButton("REACTION 4", url="https://t.me/Reactiongivers4bot?startchannel=add")
-            ],
-            [
-                InlineKeyboardButton("REACTION 5", url="https://t.me/Reactiongivers5bot?startchannel=add"),
-                InlineKeyboardButton("REACTION 6", url="https://t.me/Reactiongivers6bot?startchannel=add")
-            ],
-            [
-                InlineKeyboardButton("REACTION 7", url="https://t.me/Reactiongivers7bot?startchannel=add"),
-                InlineKeyboardButton("REACTION 8", url="https://t.me/Reactiongivers8bot?startchannel=add")
-            ],
-            [
-                InlineKeyboardButton("REACTION 9", url="https://t.me/Reactiongivers9bot?startchannel=add"),
-                InlineKeyboardButton("REACTION 10", url="https://t.me/Reactiongiver10bot?startchannel=add")
-            ],
-            [
-                InlineKeyboardButton("REACTION 11", url="https://t.me/Reactiongiver11bot?startchannel=add"),
-        InlineKeyboardButton("REACTION 12", url="https://t.me/Reactiongiver12bot?startchannel=add")
-    ],
-    [
-        InlineKeyboardButton("REACTION 13", url="https://t.me/Reactiongive13bot?startchannel=add"),
-        InlineKeyboardButton("REACTION 14", url="https://t.me/Reactiongive14bot?startchannel=add")
-    ],
-    [
-        InlineKeyboardButton("REACTION 15", url="https://t.me/Reactiongive15bot?startchannel=add"),
-        InlineKeyboardButton("REACTION 16", url="https://t.me/Reactiongive16bot?startchannel=add")
-    ],
-    [
-        InlineKeyboardButton("REACTION 17", url="https://t.me/Reactiongive17bot?startchannel=add"),
-        InlineKeyboardButton("REACTION 18", url="https://t.me/Reactiongive18bot?startchannel=add")
-    ],
-    [
-        InlineKeyboardButton("REACTION 19", url="https://t.me/Reactiongive19bot?startchannel=add"),
-        InlineKeyboardButton("REACTION 20", url="https://t.me/Reactiongive20bot?startchannel=add")
-    ],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(bot_list, reply_markup=reply_markup)
-    
-
-
-
-    elif query.data == "back_to_start":
-        user_name = query.from_user.first_name
-        welcome_message = f"""
-*👋 Hello there, {user_name}!*
-
-*Welcome to the Auto Reaction Bot 🎉*, ready to sprinkle your conversations with a little extra happiness!
-
-💁‍♂️ *Here's how I spice up your chats:*
-
-🏖 * Channel*: Add me to your channels, and I'll keep the vibe positive by reacting to messages with engaging emojis.
-
-*Note:* _You must add me to the channel before adding cloned bots._
-        """
-        keyboard = [
-            [InlineKeyboardButton("✨ More reactions", callback_data="more_reactions")],
-            [InlineKeyboardButton("👥 Join our community", url="https://t.me/automated_world")],
-            [InlineKeyboardButton("📞 Contact support", url="https://t.me/Yoursadityaaa")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
-
-# Track Channels When Added
-async def handle_chat_member(update: Update, context: CallbackContext):
-    chat = update.effective_chat
-    if update.my_chat_member.new_chat_member.status == "administrator":
-        channel_id = chat.id
-        channel_name = chat.title
-
-        # Notify the admin channel
-        await context.bot.send_message(
-            chat_id=PRIVATE_CHANNEL_ID,
-            text=(
-                f"📢 Bot added to a new channel!\n"
-                f"**Channel Name**: {channel_name}\n"
-                f"**Channel ID**: `{channel_id}`"
-            ),
-            parse_mode="Markdown",
-        )
-
-# Main Function to Run the Bot
-def main():
-    application = Application.builder().token(BOT_TOKEN).build()
-
-    # Handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.ALL, handle_update))
-    application.add_handler(CallbackQueryHandler(button_callback))
-    application.add_handler(ChatMemberHandler(handle_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
-
-    application.run_polling()
+        message.reply_text(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    print("Bot is running...")
+    app.run()
