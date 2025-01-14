@@ -1,7 +1,4 @@
-
-Pyrogram
-mega.py
-aiohttp
+pyrogram==2.0.106
+mega.py==1.0.8
+python-dotenv==1.0.0
 aiofiles
-python-dotenv
-tenacity
