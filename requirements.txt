@@ -1,6 +1,5 @@
-
 Pyrogram==2.0.106
-mega.py==1.0.9
+mega.py==1.0.8
 aiohttp==3.7.4
 aiofiles
 python-dotenv==1.0.0
