@@ -3,5 +3,4 @@ mega.py
 aiofiles
 tenacity==6.3.1
 requests
-pycryptodome
-pycrypto==0  #This will prevent pycrypto from being installed
+pycryptodome==3.21.0
