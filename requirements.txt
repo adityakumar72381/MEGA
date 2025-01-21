@@ -1,5 +1,5 @@
-pyrogram==2.0.106
+python-telegram-bot==21.7
 mega.py==1.0.8
-python-dotenv==1.0.0
 aiofiles
-pip install tenacity==8.0.1
+tenacity==6.3.1
+requests
