@@ -1,4 +1,4 @@
-pytelegrambotapi
+telethon
 pycryptodome==3.21.0
 mega.py
 aiofiles==24.1.0
