@@ -1,49 +1,52 @@
-import telebot
+from telethon import TelegramClient, events
 from mega import Mega
 import os
-import requests
 
-# Bot token
-BOT_TOKEN = "7833206147:AAH17nVkgDhJ5UvzfJly7OJ_za0g4PIt9_U"
-bot = telebot.TeleBot(BOT_TOKEN)
+# Bot configuration
+api_id = '25396020'  # Get from https://my.telegram.org/auth
+api_hash = '228ea638bed51dd4ae3cc9e4e51e198c'  # Get from https://my.telegram.org/auth
+bot_token = '7508849360:AAEl4izVzT9uZa2kvYUFnWD7U3TDlDLMVtU'
 
 # Initialize Mega API
 mega = Mega()
 m = mega.login()  # Anonymous login
 
+# Initialize Telethon bot
+client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+
 # Start command
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "Welcome to the Mega Downloader Bot! Send me a Mega.nz link to download.")
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.reply("Welcome to the Mega Downloader Bot! Send me a Mega.nz link to download.")
 
 # Handle Mega links
-@bot.message_handler(func=lambda message: message.text.startswith("https://mega.nz/"))
-def handle_mega_link(message):
-    chat_id = message.chat.id
-    mega_link = message.text
+@client.on(events.NewMessage(pattern=r'https://mega.nz/'))
+async def handle_mega_link(event):
+    chat_id = event.chat.id
+    mega_link = event.text
 
     try:
         # Download the file from Mega
-        bot.send_message(chat_id, "Downloading file, please wait...")
+        await event.reply("Downloading file, please wait...")
         file = m.download_url(mega_link)
         file_path = str(file)
 
         # Send the file to the user
-        send_file(chat_id, file_path)
-        bot.send_message(chat_id, "File sent successfully!")
+        await send_file(chat_id, file_path)
+        await event.reply("File sent successfully!")
     except Exception as e:
-        bot.send_message(chat_id, f"Failed to download the file. Error: {e}")
+        await event.reply(f"Failed to download the file. Error: {e}")
 
 # Function to send the file
-def send_file(chat_id, file_path):
+async def send_file(chat_id, file_path):
     file_type = get_file_type(file_path)
     with open(file_path, 'rb') as file:
         if file_type == "photo":
-            bot.send_photo(chat_id, file)
+            await client.send_file(chat_id, file, caption="Here's your photo!", file_name=os.path.basename(file_path))
         elif file_type == "video":
-            bot.send_video(chat_id, file)
+            await client.send_file(chat_id, file, caption="Here's your video!", file_name=os.path.basename(file_path))
         else:
-            bot.send_document(chat_id, file)
+            await client.send_file(chat_id, file, caption="Here's your document!", file_name=os.path.basename(file_path))
 
     # Clean up by removing the file after sending
     os.remove(file_path)
@@ -58,6 +61,6 @@ def get_file_type(file_path):
     else:
         return "document"
 
-# Polling the bot
-print("Bot is running...")
-bot.polling()
+# Start the bot
+client.start()
+client.run_until_disconnected()
