@@ -1,106 +1,63 @@
-import logging
+import telebot
+from mega import Mega
 import os
 import requests
-from mega import Mega
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 
-# Bot token (replace with your bot's token)
-BOT_TOKEN = '7508849360:AAFCJKq3qtwwLOBK--uVCjA1ivcsHub7qX4'
-
-# Initialize logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Bot token
+BOT_TOKEN = "7833206147:AAH17nVkgDhJ5UvzfJly7OJ_za0g4PIt9_U"
+bot = telebot.TeleBot(BOT_TOKEN)
 
 # Initialize Mega API
 mega = Mega()
-m = mega.login()  # Log in anonymously
+m = mega.login()  # Anonymous login
 
-# Function to download the file
-def download_file(url, user_id):
+# Start command
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.reply_to(message, "Welcome to the Mega Downloader Bot! Send me a Mega.nz link to download.")
+
+# Handle Mega links
+@bot.message_handler(func=lambda message: message.text.startswith("https://mega.nz/"))
+def handle_mega_link(message):
+    chat_id = message.chat.id
+    mega_link = message.text
+
     try:
-        file = m.download_url(url)  # Downloads the file from Mega
-        file_path = str(file)  # Convert PosixPath to string
-        return file_path
-    except Exception as e:
-        logger.error(f"Error downloading the file: {e}")
-        return None
+        # Download the file from Mega
+        bot.send_message(chat_id, "Downloading file, please wait...")
+        file = m.download_url(mega_link)
+        file_path = str(file)
 
-# Function to get file type
+        # Send the file to the user
+        send_file(chat_id, file_path)
+        bot.send_message(chat_id, "File sent successfully!")
+    except Exception as e:
+        bot.send_message(chat_id, f"Failed to download the file. Error: {e}")
+
+# Function to send the file
+def send_file(chat_id, file_path):
+    file_type = get_file_type(file_path)
+    with open(file_path, 'rb') as file:
+        if file_type == "photo":
+            bot.send_photo(chat_id, file)
+        elif file_type == "video":
+            bot.send_video(chat_id, file)
+        else:
+            bot.send_document(chat_id, file)
+
+    # Clean up by removing the file after sending
+    os.remove(file_path)
+
+# Function to determine file type
 def get_file_type(file_path):
-    file_path_str = str(file_path)  # Convert PosixPath to string
-    if file_path_str.lower().endswith((".png", ".jpg", ".jpeg")):
+    file_path = file_path.lower()
+    if file_path.endswith((".png", ".jpg", ".jpeg")):
         return "photo"
-    elif file_path_str.lower().endswith((".mp4", ".mkv", ".avi")):
+    elif file_path.endswith((".mp4", ".mkv", ".avi")):
         return "video"
     else:
         return "document"
 
-# Function to send the file to user
-async def send_file(update: Update, file_path, file_type):
-    user_id = update.message.chat.id
-    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
-    
-    if file_type == "photo":
-        url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto'
-    elif file_type == "video":
-        url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendVideo'
-
-    with open(file_path, 'rb') as f:
-        files = {file_type: f}
-        data = {'chat_id': user_id}
-        response = requests.post(url, files=files, data=data)
-
-        if response.status_code == 200:
-            await update.message.reply_text(f"File sent to {user_id}!")
-        else:
-            await update.message.reply_text(f"Error: {response.text}")
-
-    # Remove the file after sending it
-    os.remove(file_path)
-
-# Start command
-async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("Welcome! Send me a Mega link to download.")
-
-# Handle Mega link
-async def handle_message(update: Update, context: CallbackContext):
-    user_id = update.message.chat.id
-    text = update.message.text
-    
-    if text.startswith("https://mega.nz/"):
-        await update.message.reply_text(f"Received Mega link: {text}")
-
-        # Download file from Mega
-        file_path = download_file(text, user_id)
-        if file_path:
-            file_type = get_file_type(file_path)
-            await send_file(update, file_path, file_type)
-        else:
-            await update.message.reply_text("Error downloading the file.")
-    else:
-        await update.message.reply_text("Please send a valid Mega link.")
-
-# Cancel download
-async def cancel(update: Update, context: CallbackContext):
-    await update.message.reply_text("Download canceled.")
-
-# Main function to start the bot
-def main():
-    # Create the Application and pass it your bot's token.
-    app = Application.builder().token(BOT_TOKEN).build()
-
-    # Register command and message handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Register cancel button
-    app.add_handler(CommandHandler("cancel", cancel))
-
-    # Start the Bot
-    print("Bot is running...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+# Polling the bot
+print("Bot is running...")
+bot.polling()
