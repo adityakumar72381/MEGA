@@ -1,6 +1,6 @@
 python-telegram-bot==21.7
 pycryptodome==3.21.0
-mega.py==1.0.7
+mega.py==upgrade 
 aiofiles==24.1.0
 tenacity==5.1.5
 requests==2.32.3
