@@ -4,3 +4,5 @@ mega.py
 aiofiles==24.1.0
 tenacity==5.1.5
 requests==2.32.3
+gunicorn==21.2.0
+flask==2.2.5
